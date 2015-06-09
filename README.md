@@ -1,0 +1,2 @@
+# MongoPlay
+Class on MongoDB
