@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using M101DotNet.WebApp.Models;
 using M101DotNet.WebApp.Models.Account;
@@ -34,10 +36,15 @@ namespace M101DotNet.WebApp.Controllers
             }
 
             var blogContext = new BlogContext();
-	        
-            // XXX WORK HERE
-			User user = null;
-            // fetch a user by the email in model.Email
+
+			// fetch a user by the email in model.Email
+	        User user = null;
+			var userAwait = await blogContext.Users.FindAsync(u => u.Email.Equals(model.Email));
+	        if (userAwait != null )
+	        {
+				var list = userAwait.ToListAsync();
+		        user = list.Result.FirstOrDefault();
+	        }
 
             if (user == null)
             {
@@ -85,8 +92,8 @@ namespace M101DotNet.WebApp.Controllers
             }
 
             var blogContext = new BlogContext();
-            // XXX WORK HERE
-            // create a new user and insert it into the database
+			User user = new User(){Email = model.Email,Name = model.Name};
+			await blogContext.Users.InsertOneAsync(user);
 
             return RedirectToAction("Index", "Home");
         }

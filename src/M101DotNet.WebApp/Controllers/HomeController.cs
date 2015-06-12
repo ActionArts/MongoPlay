@@ -19,18 +19,29 @@ namespace M101DotNet.WebApp.Controllers
 		public double score { get; set; }
 		public string type { get; set; }
 	}
+
     public class HomeController : Controller
     {
-        public ActionResult Index()
-        {
-			//Homework 2.2
-	        //Task mainAsync = MainAsync();
+		public ActionResult Index()
+		{
+			//Homework 2.3
 
 
-	        return View();
-        }
+			return View();
+		}
 
-	    static async Task MainAsync()
+		//[HttpGet]
+		//[AsyncTimeout(8000)]
+		//[HandleError(ExceptionType = typeof(TimeoutException), View = "TimedOut")]
+		//public async Task<ActionResult> Index()
+		//{
+		//	//Homework 2.2
+		//	List<Grade> gradesDeleted = await DeleteGradesAsync();
+
+		//	return View(gradesDeleted);
+		//}
+
+	    static async Task<List<Grade>> DeleteGradesAsync()
 	    {
 			var connectionString = "mongodb://localhost:27017";
 			var client = new MongoClient(connectionString);
@@ -41,7 +52,7 @@ namespace M101DotNet.WebApp.Controllers
 
 			var col = db.GetCollection<Grade>("grades");
 
-			// If you select homework grade-documents, sort by student and then by score, 
+			//Hint: If you select homework grade-documents, sort by student and then by score, 
 			//you can iterate through and find the lowest score for each student by noticing 
 			//a change in student id. As you notice that change of student_id, remove the document.
 
@@ -50,7 +61,7 @@ namespace M101DotNet.WebApp.Controllers
 
 			var list = await col.Find(filter).Sort(Builders<Grade>.Sort.Ascending(g => g.student_id).Ascending(g => g.score)).ToListAsync();
 
-		    int previousStudentId = -1000;
+		    int previousStudentId = int.MinValue;
 			List<Grade> gradesToDelete = new List<Grade>();
 			foreach (var grade in list)
 			{
@@ -61,13 +72,15 @@ namespace M101DotNet.WebApp.Controllers
 				}
 			}
 
-		    foreach (var grade in gradesToDelete)
-		    {
-				var tempGrade = grade;
-				var result = await col.DeleteOneAsync(g => g.Id == tempGrade.Id);
-		    }
-			
-			
+			List<Grade> gradesDeleted = new List<Grade>();
+			for(var i = 0; i < gradesToDelete.Count; i++)
+			{
+				var iterator = i;
+				gradesDeleted.Add(await col.FindOneAndDeleteAsync<Grade>(g => g.Id.Equals(gradesToDelete[iterator].Id), new FindOneAndDeleteOptions<Grade, Grade>{ MaxTime = TimeSpan.FromSeconds(60)}) ); 
+			}
+			//var result = await col.DeleteManyAsync(g => gradesToDelete.Select(s => s.Id).Contains(g.Id));
+
+		    return gradesDeleted;
 	    }
     }
 }
